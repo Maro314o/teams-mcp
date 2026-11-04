@@ -5,11 +5,12 @@ from teams_mcp.login import begin_login as start_login, complete_login as finish
 from teams_mcp.session import session_path
 from teams_mcp.sharepoint import SharePointError, check_session, load_session
 from teams_mcp.teams import TeamsError, fetch_teams
+from teams_mcp.files import FilesError, list_team_files as collect_team_files
 
 mcp=FastMCP('teams-mcp')
 
 def _error(exc):
-    if isinstance(exc, (SharePointError, TeamsError)): return {'status':exc.code,'message':str(exc)}
+    if isinstance(exc, (SharePointError, TeamsError, FilesError)): return {'status':exc.code,'message':str(exc)}
     return {'status':'session_error','message':'Sessione locale non leggibile o non valida. Ripeti il login.'}
 
 @mcp.tool()
@@ -38,6 +39,13 @@ async def list_teams() -> dict:
     if not session_path().is_file(): return {'status':'login_required','message':'Avvia begin_login con l’indirizzo SharePoint della scuola.'}
     try: return {'status':'ready','teams':await asyncio.to_thread(fetch_teams, load_session())}
     except (TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
+
+@mcp.tool()
+async def list_team_files(team_id: str, max_depth: int | None = None, site_url: str | None = None) -> dict:
+    """Elenca ricorsivamente i file del sito principale del Team. max_depth=0 limita al primo livello; site_url risolve i casi ambigui."""
+    if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
+    try: return {'status':'ready',**await asyncio.to_thread(collect_team_files,load_session(),team_id,site_url,max_depth)}
+    except (FilesError,TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
 
 def main(): mcp.run(transport='stdio')
 if __name__=='__main__': main()

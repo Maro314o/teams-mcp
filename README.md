@@ -9,7 +9,9 @@ Server MCP locale per elencare i Team visibili nell’interfaccia Teams web con 
 - `complete_login`: dopo il tuo «fatto», acquisisce e verifica la sessione; salva solo se valida. In caso di errore conserva la sessione precedente. La finestra scade dopo 15 minuti.
 - `list_teams`: apre Teams web con Playwright in modalità headless e restituisce i Team visualizzati come `name` e `team_id`. Il server gestisce internamente la navigazione. L'identificatore distingue Team omonimi; il collegamento al sito SharePoint per leggere i file è ancora da sviluppare. Se non riesce a riconoscere la vista, restituisce un errore invece di dichiarare che non ci sono Team.
 
-L'elenco dei file e i download non sono ancora implementati.
+- `list_team_files(team_id, max_depth=None, site_url=None)`: elenca ricorsivamente le raccolte documenti accessibili del sito principale, con nome, tipo, URL SharePoint, dimensione e modifica. `max_depth=0` mostra gli elementi immediati di ciascuna raccolta; omettilo per tutti i livelli. L’associazione automatica confronta il nome Team con i siti cercati e funziona solo con un risultato esatto univoco: è un'euristica, non una prova di identità; in caso di dubbio passa `site_url`. Gli errori per raccolta sono riportati e `complete` è sempre `false`: canali privati/condivisi e contenuti esterni non vengono individuati. L'elenco non è paginato sul lato MCP.
+
+I download non sono ancora implementati.
 
 ## Installazione e avvio
 
