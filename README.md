@@ -11,7 +11,7 @@ Server MCP locale per elencare i Team visibili nell’interfaccia Teams web con 
 
 - `list_team_files(team_id, max_depth=None, site_url=None)`: elenca ricorsivamente le raccolte documenti accessibili del sito principale, con nome, tipo, URL SharePoint, dimensione e modifica. `max_depth=0` mostra gli elementi immediati di ciascuna raccolta; omettilo per tutti i livelli. L’associazione automatica confronta il nome Team con i siti cercati e funziona solo con un risultato esatto univoco: è un'euristica, non una prova di identità; in caso di dubbio passa `site_url`. Gli errori per raccolta sono riportati e `complete` è sempre `false`: canali privati/condivisi e contenuti esterni non vengono individuati. L'elenco non è paginato sul lato MCP.
 
-I download non sono ancora implementati.
+- `download_item(source_url, destination_path)`: scarica un file o una cartella SharePoint nel percorso assoluto indicato, ricorsivamente per le cartelle. Non sovrascrive file esistenti e restituisce scaricati, saltati ed errori. Per un file `destination_path` è il nome completo del file; per una cartella è la cartella di destinazione.
 
 ## Installazione e avvio
 
