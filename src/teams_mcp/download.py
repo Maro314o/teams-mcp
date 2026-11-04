@@ -2,10 +2,10 @@
 import os
 import secrets
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 import requests
-from teams_mcp.files import folder_entries, FilesError
-from teams_mcp.sharepoint import cookie_jar, get_origin, normalize_origin, check_response
+from teams_mcp.files import folder_entries, FilesError, resolve_site, validate_site, api_collection
+from teams_mcp.sharepoint import SharePointError, cookie_jar, get_origin, normalize_origin, check_response
 
 class DownloadError(Exception):
     def __init__(self, code, message):
@@ -94,7 +94,7 @@ def download_item(session, source_url, destination):
                 if name in ('.','..') or '/' in name or '\\' in name:errors.append({'path':item['path'],'error':'Nome non valido'});continue
                 try: download_file(session,origin,site_path,item['path'],local/name);downloaded.append(str(local/name))
                 except FileExistsError: skipped.append(str(local/name))
-                except (OSError,DownloadError,requests.RequestException):errors.append({'path':item['path'],'error':'Download non riuscito'})
+                except (OSError,DownloadError,SharePointError,requests.RequestException):errors.append({'path':item['path'],'error':'Download non riuscito'})
         return {'type':'folder','downloaded':downloaded,'skipped':skipped,'errors':errors,'complete':not errors and not skipped}
     if status!=404:
         check_response(probe)
@@ -110,3 +110,24 @@ def download_file(session,origin,site_path,path,destination):
         check_response(response)
         safe_write(destination,response.iter_content(chunk_size=65536))
     finally:response.close()
+
+
+def download_team_files(session, team_id, destination, site_url=None):
+    site=validate_site(session,site_url) if site_url else resolve_site(session,team_id)
+    dest=Path(destination)
+    if not dest.is_absolute() or '..' in dest.parts:
+        raise DownloadError('invalid_destination','Usa un percorso locale assoluto senza ..')
+    libraries=api_collection(session,site,'/_api/web/lists',{'$select':'Title,BaseTemplate,Hidden,RootFolder/ServerRelativeUrl','$expand':'RootFolder'})
+    results=[]
+    for lib in libraries:
+        if lib.get('BaseTemplate')!=101 or lib.get('Hidden'): continue
+        name=lib.get('Title') or ''
+        path=lib.get('RootFolder',{}).get('ServerRelativeUrl')
+        if not path or not name or name in ('.','..') or '/' in name or '\\' in name:
+            results.append({'name':name,'error':'Nome o percorso della raccolta non valido'}); continue
+        try:
+            item=download_item(session,normalize_origin(site)+quote(path,safe='/'),str(dest/name))
+            results.append({'name':name,**item})
+        except (DownloadError,FilesError,SharePointError,OSError,ValueError):
+            results.append({'name':name,'error':'Impossibile scaricare la raccolta'})
+    return {'site_url':site,'libraries':results,'complete':False,'note':'Sono considerate le raccolte del sito indicato; canali privati/condivisi e contenuti esterni non sono individuati automaticamente.'}

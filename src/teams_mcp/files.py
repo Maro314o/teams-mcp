@@ -48,7 +48,7 @@ def folder_entries(session,site,path):
     params={'@p':"'"+path.replace("'","''")+"'",'$select':'Name,ServerRelativeUrl,TimeLastModified,Length'}
     folders=api_collection(session,site,base+'/Folders',{'@p':params['@p'],'$select':'Name,ServerRelativeUrl,TimeLastModified'})
     files=api_collection(session,site,base+'/Files',params)
-    return ([{'name':x['Name'],'path':x['ServerRelativeUrl'],'modified':x.get('TimeLastModified')} for x in folders if x.get('Name')!='Forms'], [{'name':x['Name'],'path':x['ServerRelativeUrl'],'size':int(x['Length']) if x.get('Length') is not None else None,'modified':x.get('TimeLastModified')} for x in files])
+    return ([{'name':x['Name'],'path':x['ServerRelativeUrl'],'modified':x.get('TimeLastModified')} for x in folders], [{'name':x['Name'],'path':x['ServerRelativeUrl'],'size':int(x['Length']) if x.get('Length') is not None else None,'modified':x.get('TimeLastModified')} for x in files])
 
 
 def walk_folders(session,site,root,max_depth):

@@ -6,7 +6,7 @@ from teams_mcp.session import session_path
 from teams_mcp.sharepoint import SharePointError, check_session, load_session
 from teams_mcp.teams import TeamsError, fetch_teams
 from teams_mcp.files import FilesError, list_team_files as collect_team_files
-from teams_mcp.download import DownloadError, download_item as fetch_item
+from teams_mcp.download import DownloadError, download_item as fetch_item, download_team_files as fetch_team_files
 
 mcp=FastMCP('teams-mcp')
 
@@ -54,6 +54,13 @@ async def download_item(source_url: str, destination_path: str) -> dict:
     if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
     try: return {'status':'ready',**await asyncio.to_thread(fetch_item,load_session(),source_url,destination_path)}
     except (DownloadError,FilesError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
+
+@mcp.tool()
+async def download_team_files(team_id: str, destination_path: str, site_url: str | None = None) -> dict:
+    """Scarica le raccolte accessibili del sito principale di un Team, senza sovrascrivere; segnala copertura incompleta."""
+    if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
+    try: return {'status':'ready',**await asyncio.to_thread(fetch_team_files,load_session(),team_id,destination_path,site_url)}
+    except (DownloadError,FilesError,TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
 
 def main(): mcp.run(transport='stdio')
 if __name__=='__main__': main()
