@@ -1,0 +1,27 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "teams-mcp",
+  "version": "0.1.0",
+  "description": "Ricerca siti SharePoint accessibili con sessione locale.",
+  "author": {
+    "name": "Local developer"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Teams MCP",
+        "shortDescription": "Siti SharePoint",
+        "longDescription": "Trova siti SharePoint delle classi e guida la configurazione della sessione locale.",
+        "developerName": "Local developer",
+        "category": "Productivity",
+        "capabilities": [
+          "Read"
+        ],
+        "defaultPrompt": [
+          "Mostrami il Teams di matematica.",
+          "Quali siti delle mie classi sono disponibili?"
+        ]
+      }
+    }
+  }
+}

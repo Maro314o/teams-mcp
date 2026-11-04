@@ -1,0 +1,5 @@
+{
+  "name": "teams-mcp-repo",
+  "interface": {"displayName": "Teams MCP"},
+  "plugins": [{"name": "teams-mcp", "source": {"source": "local", "path": "./"}, "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"}, "category": "Productivity"}]
+}

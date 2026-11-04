@@ -1,0 +1,46 @@
+# Teams MCP
+
+Server MCP locale per elencare i Team visibili nell’interfaccia Teams web con un account Microsoft scolastico. È un primo passo verso la consultazione dei materiali condivisi; non è un client Teams ufficiale.
+
+## Cosa fa
+
+- `get_setup_status`: controlla la sessione con una richiesta SharePoint in sola lettura. Distingue la richiesta di accesso dai problemi di rete e dall'accesso negato.
+- `begin_login(site_url)`: apre una finestra Chromium locale sulla radice dell'organizzazione, derivata dall'indirizzo SharePoint indicato. Accedi tu direttamente su Microsoft.
+- `complete_login`: dopo il tuo «fatto», acquisisce e verifica la sessione; salva solo se valida. In caso di errore conserva la sessione precedente. La finestra scade dopo 15 minuti.
+- `list_teams`: apre Teams web con Playwright in modalità headless e restituisce i Team visualizzati come `name` e `team_id`. Il server gestisce internamente la navigazione. L'identificatore distingue Team omonimi; il collegamento al sito SharePoint per leggere i file è ancora da sviluppare. Se non riesce a riconoscere la vista, restituisce un errore invece di dichiarare che non ci sono Team.
+
+L'elenco dei file e i download non sono ancora implementati.
+
+## Installazione e avvio
+
+Richiede Python 3.11+, [uv](https://docs.astral.sh/uv/) e una sessione desktop Linux per il login.
+
+```sh
+uv sync --locked
+uv run playwright install chromium
+uv run teams-mcp
+```
+
+Il server usa `stdio`: attende messaggi MCP e non apre una porta per il protocollo. Configura il client MCP con il percorso assoluto di `.venv/bin/teams-mcp` come comando e `stdio` come trasporto. Il plugin contiene la skill; il server viene registrato separatamente nel Codex locale con un percorso assoluto, come per ClasseViva. Per una prima installazione esegui `make install-local-plugin` e apri una nuova chat. Se il server è già registrato, non ripetere il comando senza prima verificare la configurazione esistente.
+
+Se il client MCP non trasmette le variabili grafiche al processo, configurare almeno `DISPLAY` (e, se necessario, `WAYLAND_DISPLAY` e `XDG_RUNTIME_DIR`) nell’ambiente del server MCP: senza accesso al desktop la finestra di login non può aprirsi. Il valore corretto dipende dalla sessione desktop; non impostarlo a un valore fisso per tutti gli utenti.
+
+La prima volta l'agente chiede un indirizzo SharePoint dell'organizzazione, apre la finestra del browser con `begin_login` e attende che tu acceda. Scrivi «fatto» solo quando la pagina SharePoint si è aperta. L'agente chiama `complete_login` e riprova l'operazione. Le credenziali non vanno scritte in chat. Il browser si apre sul desktop e può richiedere nuovamente l'accesso dopo la scadenza della sessione.
+
+## Sessione e sicurezza
+
+Su Linux la sessione è salvata in `$XDG_DATA_HOME/teams-mcp/session.json`, oppure `~/.local/share/teams-mcp/session.json`. Il browser viene controllato dal programma, senza leggere profili personali esistenti. Prima di sostituire il file il programma verifica che la nuova sessione acceda a SharePoint; scrive un file temporaneo privato e lo sostituisce atomicamente. La cartella viene creata con permessi `0700`, il file con `0600` e viene verificato il proprietario della cartella. I segreti non sono restituiti dagli strumenti MCP. La sessione corrente rimane intatta se il nuovo login non va a buon fine.
+
+Il file può contenere cookie e token utilizzabili come l'utente. I permessi Unix non cifrano i dati e non proteggono da processi dello stesso account o dall'amministratore. Non condividerlo né inserirlo in Git; `.gitignore` esclude i file di sessione comuni. Rimuovere il file elimina solo la copia locale; per revocare l'accesso usare anche le funzioni Microsoft. La durata della sessione dipende dalla scuola e dalle politiche Microsoft.
+
+Le richieste API SharePoint usano il solo tenant `*.sharepoint.com` ricavato dalla sessione e non seguono redirect. Per listare i Team il browser apre anche Teams e i normali servizi Microsoft di autenticazione. La lettura della vista Teams non è un’integrazione Microsoft Graph ufficiale e può interrompersi se l’interfaccia cambia. Se Teams richiede un login separato, il login attuale su SharePoint potrebbe non essere sufficiente.
+
+## Verifica
+
+```sh
+uv run --locked python -m unittest discover -s tests
+```
+
+## Sviluppo
+
+Il progetto usa `uv` per ambiente, dipendenze e lockfile. La [guida allo sviluppo](docs/sviluppo.md) descrive i componenti e i comandi; [AGENTS.md](AGENTS.md) contiene le istruzioni per gli agenti che lavorano sul repository. La skill in `skills/teams-setup/` è destinata invece agli agenti che usano il server.

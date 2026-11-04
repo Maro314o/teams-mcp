@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "teams-mcp"
+version = "0.1.0"
+description = "Server MCP locale per i materiali SharePoint di Teams"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.28,<2",
+    "playwright>=1.50,<2",
+    "requests>=2.32,<3",
+]
+
+[project.scripts]
+teams-mcp = "teams_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/teams_mcp"]
