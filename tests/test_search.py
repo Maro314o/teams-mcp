@@ -39,4 +39,4 @@ class SearchTests(unittest.TestCase):
         path.return_value.is_file.return_value=True
         result=asyncio.run(search_tool('id',name='esercizi',max_depth=1))
         self.assertEqual(result['status'],'ready')
-        search.assert_called_once_with({},'id',None,1,'esercizi',None,None)
+        search.assert_called_once_with({},'id',None,1,'esercizi',None,None,None,None,None,None)

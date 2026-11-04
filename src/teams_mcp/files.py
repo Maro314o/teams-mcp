@@ -1,4 +1,5 @@
 """Individuazione prudente e visita delle raccolte SharePoint."""
+from datetime import datetime, timezone
 from urllib.parse import quote, urlsplit, urlunsplit
 from teams_mcp.sharepoint import SharePointError, get_origin, list_sites, call, normalize_origin
 from teams_mcp.teams import fetch_teams
@@ -66,7 +67,63 @@ def walk_folders(session,site,root,max_depth):
     return result
 
 
-def list_team_files(session,team_id,site_url,max_depth):
+
+def validate_selection(sort_by, order, limit, item_type=None):
+    if sort_by not in (None, 'name', 'modified', 'size'):
+        raise FilesError('invalid_sort', 'sort_by deve essere name, modified o size.')
+    if order not in (None, 'asc', 'desc') or (order is not None and sort_by is None):
+        raise FilesError('invalid_sort', 'order richiede sort_by e deve essere asc o desc.')
+    if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or limit < 1):
+        raise FilesError('invalid_limit', 'limit deve essere un intero positivo.')
+    if item_type not in (None, 'file', 'folder'):
+        raise FilesError('invalid_type', 'item_type deve essere file o folder.')
+
+
+def select_items(result, sort_by=None, order=None, limit=None, item_type=None):
+    validate_selection(sort_by, order, limit, item_type)
+    items = [item for item in result['items'] if item_type is None or item.get('type') == item_type]
+    if sort_by:
+        def value(item):
+            raw = item.get(sort_by)
+            if raw is None: return None
+            if sort_by == 'name': return raw.casefold() if isinstance(raw, str) else None
+            if sort_by == 'size': return raw if isinstance(raw, (int, float)) and not isinstance(raw, bool) else None
+            try:
+                date = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+                return date.timestamp() if date.tzinfo else date.replace(tzinfo=timezone.utc).timestamp()
+            except (ValueError, TypeError, OverflowError, OSError): return None
+        known = [(item, value(item)) for item in items]
+        missing = [item for item, key in known if key is None]
+        valid = [(item, key) for item, key in known if key is not None]
+        valid.sort(key=lambda pair: pair[0].get('path', ''))
+        valid.sort(key=lambda pair: pair[1], reverse=order == 'desc')
+        items = [item for item, _ in valid] + missing
+    total = len(items)
+    if limit is not None: items = items[:limit]
+    return {**result, 'items': items, 'total_matches': total, 'returned_count': len(items), 'truncated': len(items) < total}
+
+def normalize_extensions(extensions):
+    if extensions is None: return None
+    if not isinstance(extensions, list) or not extensions:
+        raise FilesError('invalid_extension', 'Specifica una lista non vuota di estensioni.')
+    normalized = []
+    for extension in extensions:
+        if not isinstance(extension, str):
+            raise FilesError('invalid_extension', 'Ogni estensione deve essere una stringa.')
+        value = extension.strip().casefold().removeprefix('.')
+        if not value or any(c in value for c in '/\\.') or any(c.isspace() for c in value):
+            raise FilesError('invalid_extension', 'Specifica estensioni semplici, per esempio pdf o .docx.')
+        normalized.append(value)
+    return normalized
+
+def matches_extension(item, extensions):
+    return item.get('type') == 'file' and any(item['name'].casefold().endswith('.' + ext) for ext in extensions)
+
+def list_team_files(session,team_id,site_url,max_depth,sort_by=None,order=None,limit=None,item_type=None,extensions=None):
+    validate_selection(sort_by,order,limit,item_type)
+    extensions=normalize_extensions(extensions)
+    if extensions and item_type == 'folder':
+        raise FilesError('invalid_type', 'Il filtro estensioni si applica solo ai file.')
     if max_depth is not None and (isinstance(max_depth,bool) or not isinstance(max_depth,int) or max_depth<0): raise FilesError('invalid_depth','max_depth deve essere un intero maggiore o uguale a zero.')
     site=validate_site(session,site_url) if site_url else resolve_site(session,team_id)
     lists=api_collection(session,site,'/_api/web/lists',{'$select':'Title,BaseTemplate,Hidden,RootFolder/ServerRelativeUrl','$expand':'RootFolder'})
@@ -77,18 +134,21 @@ def list_team_files(session,team_id,site_url,max_depth):
         if not root: errors.append({'library':library.get('Title'),'error':'Percorso non disponibile'}); continue
         try: items.extend(walk_folders(session,site,root,max_depth))
         except (FilesError,SharePointError,KeyError,ValueError): errors.append({'library':library.get('Title'),'error':'Impossibile elencare completamente la raccolta'})
-    return {'site_url':site,'items':items,'errors':errors,'complete':False,'note':'Esplorate le raccolte accessibili del sito indicato; canali privati/condivisi e contenuti esterni non sono individuati automaticamente.'}
+    result={'site_url':site,'items':items,'errors':errors,'complete':False,'note':'Esplorate le raccolte accessibili del sito indicato; canali privati/condivisi e contenuti esterni non sono individuati automaticamente.'}
+    if extensions: result['items']=[item for item in result['items'] if matches_extension(item,extensions)]
+    return select_items(result,sort_by,order,limit,item_type)
 
 
-def search_team_files(session, team_id, site_url, max_depth, name=None, extension=None, path_contains=None):
+def search_team_files(session, team_id, site_url, max_depth, name=None, extension=None, path_contains=None, sort_by=None, order=None, limit=None, extensions=None):
+    validate_selection(sort_by,order,limit)
     """Filtra i file dell'elenco ricorsivo; preserva gli avvisi sulla copertura."""
     name = name.strip().casefold() if name else None
-    extension = extension.strip().casefold().lstrip('.') if extension else None
+    if extension and extensions is not None:
+        raise FilesError('invalid_extension', 'Usa extension oppure extensions, non entrambi.')
+    extensions = normalize_extensions(extensions if extensions is not None else ([extension] if extension else None))
     path_contains = path_contains.strip().casefold() if path_contains else None
-    if not any((name, extension, path_contains)):
+    if not any((name, extensions, path_contains)):
         raise FilesError('invalid_search', 'Specifica almeno un filtro non vuoto: nome, estensione o percorso.')
-    if extension and ('/' in extension or '\\' in extension):
-        raise FilesError('invalid_search', 'L’estensione non può contenere separatori di percorso.')
     result = list_team_files(session, team_id, site_url, max_depth)
     matches = []
     for item in result['items']:
@@ -97,9 +157,10 @@ def search_team_files(session, team_id, site_url, max_depth, name=None, extensio
         item_name = item['name'].casefold()
         if name and name not in item_name:
             continue
-        if extension and not item_name.endswith('.' + extension):
+        if extensions and not matches_extension(item, extensions):
             continue
         if path_contains and path_contains not in item.get('path', '').casefold():
             continue
         matches.append(item)
-    return {**result, 'items': matches, 'count': len(matches)}
+    selected = select_items({**result, 'items': matches},sort_by,order,limit)
+    return {**selected, 'count': len(selected['items'])}

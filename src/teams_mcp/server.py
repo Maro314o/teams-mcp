@@ -42,17 +42,17 @@ async def list_teams() -> dict:
     except (TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
 
 @mcp.tool()
-async def list_team_files(team_id: str, max_depth: int | None = None, site_url: str | None = None) -> dict:
-    """Elenca ricorsivamente i file del sito principale del Team. max_depth=0 limita al primo livello; site_url risolve i casi ambigui."""
+async def list_team_files(team_id: str, max_depth: int | None = None, site_url: str | None = None, sort_by: str | None = None, order: str | None = None, limit: int | None = None, item_type: str | None = None, extensions: list[str] | None = None) -> dict:
+    """Elenca file e cartelle; extensions filtra i soli file per estensioni esatte, es. [pdf, docx]. Opzionali sort_by name/modified/size, order asc/desc, limit e item_type file/folder; max_depth=0 limita al primo livello. Copertura parziale."""
     if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
-    try: return {'status':'ready',**await asyncio.to_thread(collect_team_files,load_session(),team_id,site_url,max_depth)}
+    try: return {'status':'ready',**await asyncio.to_thread(collect_team_files,load_session(),team_id,site_url,max_depth,sort_by,order,limit,item_type,extensions)}
     except (FilesError,TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
 
 @mcp.tool()
-async def search_team_files(team_id: str, name: str | None = None, extension: str | None = None, path_contains: str | None = None, max_depth: int | None = None, site_url: str | None = None) -> dict:
-    """Cerca file per nome, estensione o percorso nel sito principale del Team; i filtri si combinano e non distinguono maiuscole. Ometti max_depth per tutti i livelli."""
+async def search_team_files(team_id: str, name: str | None = None, extension: str | None = None, path_contains: str | None = None, max_depth: int | None = None, site_url: str | None = None, sort_by: str | None = None, order: str | None = None, limit: int | None = None, extensions: list[str] | None = None) -> dict:
+    """Cerca file per nome, estensioni o percorso. Usa extensions per più estensioni esatte oppure extension per una sola, non entrambi; i filtri si combinano. Opzionali sort_by, order, limit e max_depth; copertura parziale."""
     if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
-    try: return {'status':'ready',**await asyncio.to_thread(search_files,load_session(),team_id,site_url,max_depth,name,extension,path_contains)}
+    try: return {'status':'ready',**await asyncio.to_thread(search_files,load_session(),team_id,site_url,max_depth,name,extension,path_contains,sort_by,order,limit,extensions)}
     except (FilesError,TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
 
 @mcp.tool()

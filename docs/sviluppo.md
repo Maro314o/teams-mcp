@@ -20,7 +20,7 @@ Per aggiungere o rimuovere dipendenze usa `uv add NOME` o `uv remove NOME` e inc
 - `server.py`: tool MCP, avvio stdio e risposta agli errori.
 - `teams.py`: browser headless e interpretazione delle schede della vista Teams. È un'integrazione con l'interfaccia web, non l'API ufficiale Graph.
 - `sharepoint.py`: sessione e chiamate SharePoint; distingue ricerca siti e Team.
-- `files.py`: individuazione delle raccolte, visita ricorsiva e ricerca per nome, estensione e percorso nel sito principale.
+- `files.py`: individuazione delle raccolte, visita ricorsiva e ricerca per nome, estensione e percorso nel sito principale; ordinamento e limite si applicano dopo l’esplorazione e i filtri.
 - `download.py`: download di file, cartelle e raccolte, senza sovrascrittura.
 - `login.py`: processo del browser interattivo e salvataggio della sessione dopo verifica SharePoint.
 - `session.py`: percorso della sessione locale.
