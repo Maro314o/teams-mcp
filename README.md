@@ -15,6 +15,29 @@ Server MCP locale per elencare i Team visibili nell’interfaccia Teams web con 
 - `download_team_files(team_id, destination_path, site_url=None)`: scarica le raccolte accessibili del sito principale in sottocartelle distinte; non individua automaticamente canali privati/condivisi né contenuti esterni e riporta `complete: false`. La corrispondenza automatica per nome è un’euristica.
 - `download_item(source_url, destination_path)`: scarica un file o una cartella SharePoint nel percorso assoluto indicato, ricorsivamente per le cartelle. Non sovrascrive file esistenti e restituisce scaricati, saltati ed errori. Per un file `destination_path` è il nome completo del file; per una cartella è la cartella di destinazione.
 
+## Installazione tramite un agente Codex
+
+Puoi dare all’agente il link di questo repository e scrivere:
+
+> Installa Teams MCP seguendo il README, configura il plugin, la skill e il server MCP locale, poi guidami nel primo accesso Microsoft senza chiedermi password o cookie in chat.
+
+### Istruzioni per l’agente che esegue l’installazione
+
+1. Verifica di lavorare sul computer e sull’account Codex in cui l’utente desidera usare il plugin. L’installazione descritta qui è **locale a quell’host**. Servono Linux con desktop grafico per il login, `git`, `make`, `uv` e Python 3.11 o successivo. Chromium di Playwright viene installato durante la procedura. Se manca un prerequisito, spiega come installarlo seguendo le istruzioni ufficiali; non acquisire password o codici dell’utente.
+2. Scegli una cartella di lavoro accessibile all’utente. Se il repository non è già presente, clona `https://github.com/Maro314o/teams-mcp.git` e apri la cartella `teams-mcp`. Se esiste già, controlla remoto e stato Git e preserva le modifiche locali; non sovrascrivere né azzerare un checkout esistente.
+3. Controlla `codex plugin marketplace list --json`, `codex plugin list --json` e `codex mcp list --json`. Per una **prima installazione**, dalla radice del checkout esegui:
+
+   ```sh
+   make install-local-plugin
+   ```
+
+   Il comando sincronizza `.venv` con `uv.lock`, installa Chromium di Playwright, registra il marketplace locale `teams-mcp-repo`, installa il plugin e la skill `teams-mcp`, e registra il server `teams-mcp` in Codex usando il percorso assoluto del checkout. Il server viene avviato in locale su stdio. Il comando registra anche le variabili grafiche presenti nella sessione: eseguilo dal desktop dove l’utente farà login.
+4. Se plugin o server sono già installati, verifica prima i loro percorsi e la loro origine. Non rimuovere o sovrascrivere configurazioni esistenti di altri progetti né ripetere alla cieca il comando di prima installazione. Questo repository non fornisce ancora un comando di aggiornamento automatico: comunica all’utente la situazione e intervieni sulla sola installazione Teams MCP appropriata.
+5. Verifica che il plugin `teams-mcp@teams-mcp-repo` sia abilitato e che `codex mcp list --json` riporti il server `teams-mcp` abilitato con il percorso dell’eseguibile `.venv/bin/teams-mcp` del checkout. Esegui anche `uv run --locked python -m unittest discover -s tests`. Poi chiedi all’utente di aprire **una nuova chat locale**: i tool e le skill di una chat già avviata non si ricaricano automaticamente. Non dichiarare che i tool siano disponibili nella nuova chat finché non sono stati verificati lì.
+6. Nella nuova chat, prima di accedere ai dati, chiama `get_setup_status`. Se serve autenticarsi, chiedi solo un URL SharePoint dell’organizzazione, se non è già noto; chiama `begin_login` e lascia che l’utente acceda a Microsoft nella finestra del browser. Quando conferma «fatto», chiama `complete_login` e verifica nuovamente `get_setup_status`. Se Teams richiede un accesso separato, spiegalo: il login SharePoint potrebbe non bastare. Non chiedere né stampare password, codici, cookie o token; non aprire o sostituire la sessione esistente per un semplice controllo.
+
+Il login salva la sessione localmente fuori dal repository. Una sessione valida SharePoint non garantisce automaticamente l’accesso a Teams; verificare i tool senza inventare risultati. Le funzionalità e i limiti di copertura dei file sono descritti sopra.
+
 ## Installazione e avvio
 
 Richiede Python 3.11+, [uv](https://docs.astral.sh/uv/) e una sessione desktop Linux per il login.
