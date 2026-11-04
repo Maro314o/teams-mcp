@@ -11,6 +11,8 @@ Se l’utente cerca file per nome, estensione o parte del percorso, usa `search_
 
 Se i tool non sono disponibili, verifica che il plugin sia abilitato e il server registrato con `codex plugin list` e `codex mcp list`. Segui il README del checkout per installare o aggiornare, poi apri una nuova chat: i tool di una chat esistente non vengono ricaricati automaticamente. Non fingere di aver consultato Teams.
 
+Per `download_item`, copia esattamente il valore `sharepoint_url` restituito da `list_team_files` o `search_team_files` come `source_url`. Non ricostruire o correggere a intuito l'URL a partire da nomi o titoli: anche una sola lettera diversa nella raccolta può causare un 404. Se la chiamata fallisce, confronta il valore passato con quello originale e, se necessario, ricerca di nuovo il file; non inventare un percorso alternativo. Il titolo o la data possono aiutare a identificare il file, ma non sostituiscono il suo URL.
+
 ## Login
 
 Se lo stato è `login_required`, chiedi l'indirizzo HTTPS SharePoint dell'organizzazione solo se non è già noto. Chiama `begin_login` con `site_url`, spiega che deve accedere nella finestra del browser sul desktop e chiedi di scrivere «fatto». Dopo la conferma chiama `complete_login`; se riesce, ricontrolla `get_setup_status` e prosegui con la richiesta originale. Se il browser non si apre, segui la sezione diagnostica del README. Non chiedere o riportare password, codici, cookie o token.

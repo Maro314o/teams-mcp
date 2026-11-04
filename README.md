@@ -19,6 +19,8 @@ Entrambi i tool accettano `extensions`, una lista facoltativa di estensioni esat
 - `download_team_files(team_id, destination_path, site_url=None)`: scarica le raccolte accessibili del sito principale in sottocartelle distinte; non individua automaticamente canali privati/condivisi né contenuti esterni e riporta `complete: false`. La corrispondenza automatica per nome è un’euristica.
 - `download_item(source_url, destination_path)`: scarica un file o una cartella SharePoint nel percorso assoluto indicato, ricorsivamente per le cartelle. Non sovrascrive file esistenti e restituisce scaricati, saltati ed errori. Per un file `destination_path` è il nome completo del file; per una cartella è la cartella di destinazione.
 
+Per scaricare un risultato dell'elenco o della ricerca, passa a `download_item` il valore `sharepoint_url` restituito dal tool, senza ricostruire il percorso dal nome del file o della raccolta.
+
 ## Installazione tramite un agente Codex
 
 Puoi dare all’agente il link di questo repository e scrivere:
