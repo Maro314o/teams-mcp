@@ -78,3 +78,28 @@ def list_team_files(session,team_id,site_url,max_depth):
         try: items.extend(walk_folders(session,site,root,max_depth))
         except (FilesError,SharePointError,KeyError,ValueError): errors.append({'library':library.get('Title'),'error':'Impossibile elencare completamente la raccolta'})
     return {'site_url':site,'items':items,'errors':errors,'complete':False,'note':'Esplorate le raccolte accessibili del sito indicato; canali privati/condivisi e contenuti esterni non sono individuati automaticamente.'}
+
+
+def search_team_files(session, team_id, site_url, max_depth, name=None, extension=None, path_contains=None):
+    """Filtra i file dell'elenco ricorsivo; preserva gli avvisi sulla copertura."""
+    name = name.strip().casefold() if name else None
+    extension = extension.strip().casefold().lstrip('.') if extension else None
+    path_contains = path_contains.strip().casefold() if path_contains else None
+    if not any((name, extension, path_contains)):
+        raise FilesError('invalid_search', 'Specifica almeno un filtro non vuoto: nome, estensione o percorso.')
+    if extension and ('/' in extension or '\\' in extension):
+        raise FilesError('invalid_search', 'L’estensione non può contenere separatori di percorso.')
+    result = list_team_files(session, team_id, site_url, max_depth)
+    matches = []
+    for item in result['items']:
+        if item.get('type') != 'file':
+            continue
+        item_name = item['name'].casefold()
+        if name and name not in item_name:
+            continue
+        if extension and not item_name.endswith('.' + extension):
+            continue
+        if path_contains and path_contains not in item.get('path', '').casefold():
+            continue
+        matches.append(item)
+    return {**result, 'items': matches, 'count': len(matches)}

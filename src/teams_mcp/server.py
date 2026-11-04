@@ -5,7 +5,7 @@ from teams_mcp.login import begin_login as start_login, complete_login as finish
 from teams_mcp.session import session_path
 from teams_mcp.sharepoint import SharePointError, check_session, load_session
 from teams_mcp.teams import TeamsError, fetch_teams
-from teams_mcp.files import FilesError, list_team_files as collect_team_files
+from teams_mcp.files import FilesError, list_team_files as collect_team_files, search_team_files as search_files
 from teams_mcp.download import DownloadError, download_item as fetch_item, download_team_files as fetch_team_files
 
 mcp=FastMCP('teams-mcp')
@@ -46,6 +46,13 @@ async def list_team_files(team_id: str, max_depth: int | None = None, site_url: 
     """Elenca ricorsivamente i file del sito principale del Team. max_depth=0 limita al primo livello; site_url risolve i casi ambigui."""
     if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
     try: return {'status':'ready',**await asyncio.to_thread(collect_team_files,load_session(),team_id,site_url,max_depth)}
+    except (FilesError,TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
+
+@mcp.tool()
+async def search_team_files(team_id: str, name: str | None = None, extension: str | None = None, path_contains: str | None = None, max_depth: int | None = None, site_url: str | None = None) -> dict:
+    """Cerca file per nome, estensione o percorso nel sito principale del Team; i filtri si combinano e non distinguono maiuscole. Ometti max_depth per tutti i livelli."""
+    if not session_path().is_file(): return {'status':'login_required','message':'Configura prima la sessione.'}
+    try: return {'status':'ready',**await asyncio.to_thread(search_files,load_session(),team_id,site_url,max_depth,name,extension,path_contains)}
     except (FilesError,TeamsError,SharePointError,ValueError,OSError,KeyError,TypeError) as exc: return _error(exc)
 
 @mcp.tool()
