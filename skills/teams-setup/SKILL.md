@@ -19,4 +19,6 @@ Se lo stato è `login_required`, chiedi l'indirizzo HTTPS SharePoint dell'organi
 
 Se il tool restituisce `teams_login_required`, spiega che Teams richiede un accesso separato; l’attuale login del server apre SharePoint e potrebbe non bastare. Se `teams_view_unavailable` o `browser_error`, segnala il problema senza presentare una lista vuota come risultato.
 
-Se lo stato è `access_denied`, `network_error`, `service_error` o `unexpected_response`, non presumere che la sessione sia scaduta: spiega l'errore. La presenza di un file non prova che la sessione sia valida.
+Se `get_setup_status` o un'operazione restituisce `access_denied`, spiega che l'accesso è stato negato e che la causa può essere una sessione scaduta oppure un problema di permessi; non presentare la scadenza come accertata. Proponi subito di rifare il login come verifica, prima di chiedere all'utente di fornire i file. Se l'utente accetta, usa la procedura `begin_login` e `complete_login` descritta sopra, quindi richiama `get_setup_status` e riprova l'operazione richiesta se lo stato lo permette. Se l'accesso rimane negato dopo il login, riferisci il risultato e spiega che potrebbero esserci problemi di permessi o del sito verificato, senza ripetere il login in ciclo.
+
+Se lo stato è `network_error`, `service_error` o `unexpected_response`, spiega l'errore senza presumere che la sessione sia scaduta. La presenza di un file non prova che la sessione sia valida.
